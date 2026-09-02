@@ -1,0 +1,22 @@
+{
+  "name": "pixel-run",
+  "version": "1.0.0",
+  "description": "A small browser platformer served by Express — no build step, no database.",
+  "main": "server.js",
+  "license": "MIT",
+  "author": "Umair Qureshi",
+  "keywords": ["game", "platformer", "canvas", "express", "nodejs"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR-USERNAME/pixel-run.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pixel Run</title>
+<meta name="description" content="A small side-scrolling platformer running on Node.js." />
+<link rel="stylesheet" href="styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%232b1e4f'/><rect x='5' y='4' width='6' height='8' fill='%23ff7a5c'/></svg>" />
+</head>
+<body>
+  <main class="stage">
+    <div class="hud">
+      <span class="hud-item"><b id="score">0</b> coins</span>
+      <span class="hud-item"><b id="lives">3</b> lives</span>
+      <span class="hud-item hud-hint">Arrows or A/D to move &middot; Space to jump &middot; R to restart</span>
+    </div>
+
+    <div class="screen">
+      <canvas id="game" width="960" height="540"></canvas>
+      <div id="banner" class="banner" hidden>
+        <p id="banner-text"></p>
+        <button id="banner-btn" type="button">Play again</button>
+      </div>
+    </div>
+
+    <div class="touch" aria-hidden="true">
+      <button class="pad" data-key="left" type="button">&#9664;</button>
+      <button class="pad" data-key="right" type="button">&#9654;</button>
+      <button class="pad pad-jump" data-key="jump" type="button">Jump</button>
+    </div>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
