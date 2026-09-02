@@ -1,0 +1,126 @@
+:root {
+  --ink: #f3ecff;
+  --night: #17102e;
+  --night-deep: #0d0820;
+  --coral: #ff7a5c;
+  --mint: #6fe3b0;
+  --dust: #8d84ad;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% 0%, #241a45 0%, var(--night-deep) 70%);
+  color: var(--ink);
+  font-family: "Menlo", "DejaVu Sans Mono", "Courier New", monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.stage {
+  width: min(960px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  font-size: 14px;
+  color: var(--dust);
+  flex-wrap: wrap;
+}
+
+.hud b {
+  color: var(--ink);
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+.hud-hint {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.screen {
+  position: relative;
+  border: 3px solid #3b2d68;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--night);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+.banner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(13, 8, 32, 0.86);
+  text-align: center;
+}
+
+.banner p {
+  margin: 0;
+  font-size: clamp(20px, 4vw, 30px);
+  line-height: 1.4;
+  max-width: 22ch;
+}
+
+.banner button,
+.pad {
+  font: inherit;
+  color: var(--night-deep);
+  background: var(--mint);
+  border: 0;
+  border-radius: 4px;
+  padding: 12px 22px;
+  cursor: pointer;
+}
+
+.banner button:hover,
+.pad:active {
+  background: var(--coral);
+}
+
+:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
+}
+
+.touch {
+  display: none;
+  gap: 10px;
+}
+
+.pad {
+  flex: 1;
+  padding: 18px;
+  user-select: none;
+}
+
+.pad-jump { flex: 1.6; }
+
+@media (hover: none) and (pointer: coarse) {
+  .touch { display: flex; }
+  .hud-hint { display: none; }
+}
