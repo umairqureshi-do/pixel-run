@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pixel Run</title>
+<meta name="description" content="A small side-scrolling platformer running on Node.js." />
+<link rel="stylesheet" href="styles.css?v=3" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%232b1e4f'/><rect x='5' y='4' width='6' height='8' fill='%23ff7a5c'/></svg>" />
+</head>
+<body>
+  <main class="stage">
+    <div class="hud">
+      <span class="hud-item"><b id="score">0</b> coins</span>
+      <span class="hud-item"><b id="lives">3</b> lives</span>
+      <span class="hud-item" id="player-tag"></span>
+      <div class="hud-controls">
+        <button id="theme" class="chip" type="button">Space mode</button>
+        <button id="sound" class="chip" type="button" aria-pressed="false">Sound on</button>
+      </div>
+    </div>
+
+    <div class="screen">
+      <canvas id="game" width="960" height="540"></canvas>
+
+      <div id="banner" class="banner">
+        <p id="banner-text">Collect coins, stomp what moves, reach the flag.</p>
+
+        <div id="name-row" class="name-row">
+          <label for="player-name">Name</label>
+          <input id="player-name" type="text" maxlength="12" autocomplete="off" placeholder="Your name" />
+        </div>
+        <p id="name-error" class="name-error" hidden>Enter a name first</p>
+
+        <button id="banner-btn" type="button">Start</button>
+
+        <div id="board-wrap" class="board" hidden>
+          <p class="board-title">Top runs</p>
+          <ol id="board-list"></ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="touch" aria-hidden="true">
+      <button class="pad" data-key="left" type="button">&#9664;</button>
+      <button class="pad" data-key="right" type="button">&#9654;</button>
+      <button class="pad pad-jump" data-key="jump" type="button">Jump</button>
+    </div>
+
+    <p class="hint">Arrows or A/D to move &middot; Space to jump &middot; M to mute &middot; T for space mode &middot; R to restart</p>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
