@@ -103,7 +103,7 @@
 
   function setTheme(t) {
     theme = t;
-    themeBtn.textContent = theme === 'world' ? 'Space mode' : 'World mode';
+    themeBtn.textContent = theme === 'world' ? 'Mode: world' : 'Mode: space';
   }
 
   // ---- high scores --------------------------------------------------------
