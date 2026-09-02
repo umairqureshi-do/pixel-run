@@ -10,7 +10,8 @@ const HOST = '0.0.0.0';
 
 // High scores live in a plain JSON file next to the app. No database needed.
 const SCORES_FILE = path.join(__dirname, 'scores.json');
-const MAX_KEPT = 50;
+const TOP_N = 100;   // how many the board shows
+const MAX_KEPT = 500; // how many are held on disk
 
 function readScores() {
   try {
@@ -32,11 +33,12 @@ function writeScores(list) {
   }
 }
 
+function sorted(list) {
+  return list.slice().sort((a, b) => (b.score - a.score) || (a.time - b.time));
+}
+
 function rank(list) {
-  return list
-    .slice()
-    .sort((a, b) => (b.score - a.score) || (a.time - b.time))
-    .slice(0, 10);
+  return sorted(list).slice(0, TOP_N);
 }
 
 app.use(express.json({ limit: '4kb' }));
@@ -69,10 +71,7 @@ app.post('/api/scores', (req, res) => {
     at: new Date().toISOString()
   });
 
-  const kept = rank(list).concat(
-    list.slice().sort((a, b) => (b.score - a.score) || (a.time - b.time)).slice(10, MAX_KEPT)
-  );
-  writeScores(kept.slice(0, MAX_KEPT));
+  writeScores(sorted(list).slice(0, MAX_KEPT));
 
   res.json(rank(readScores()));
 });
