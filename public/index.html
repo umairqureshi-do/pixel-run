@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Pixel Run</title>
 <meta name="description" content="A small side-scrolling platformer running on Node.js." />
-<link rel="stylesheet" href="styles.css?v=4" />
+<link rel="stylesheet" href="styles.css?v=5" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%232b1e4f'/><rect x='5' y='4' width='6' height='8' fill='%23ff7a5c'/></svg>" />
 </head>
 <body>
@@ -35,7 +35,7 @@
         <button id="banner-btn" type="button">Start</button>
 
         <div id="board-wrap" class="board" hidden>
-          <p class="board-title">Top runs</p>
+          <p class="board-title" id="board-title">Top runs</p>
           <ol id="board-list"></ol>
         </div>
       </div>
@@ -50,6 +50,6 @@
     <p class="hint">Arrows or A/D to move &middot; Space to jump &middot; M to mute &middot; T for space mode &middot; R to restart</p>
   </main>
 
-  <script src="game.js?v=4"></script>
+  <script src="game.js?v=5"></script>
 </body>
 </html>

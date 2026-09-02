@@ -163,7 +163,7 @@ canvas {
 }
 
 .board {
-  width: min(320px, 100%);
+  width: min(340px, 100%);
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
@@ -178,10 +178,20 @@ canvas {
 
 .board ol {
   margin: 0;
-  padding: 0;
+  padding: 0 8px 0 0;
   list-style: none;
   font-size: 13px;
   text-align: left;
+  max-height: 190px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.board ol::-webkit-scrollbar { width: 6px; }
+.board ol::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
 }
 
 .board li {
@@ -189,6 +199,17 @@ canvas {
   gap: 10px;
   padding: 3px 0;
   color: var(--dust);
+}
+
+.board li .pos {
+  width: 30px;
+  text-align: right;
+  flex: none;
+}
+
+.board li.me b,
+.board li.me .pos {
+  color: var(--coral);
 }
 
 .board li b {

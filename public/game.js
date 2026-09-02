@@ -20,6 +20,7 @@
   var nameError = document.getElementById('name-error');
   var boardWrap = document.getElementById('board-wrap');
   var boardList = document.getElementById('board-list');
+  var boardTitle = document.getElementById('board-title');
 
   // ---- tuning -------------------------------------------------------------
   var GRAVITY = 2300;
@@ -115,18 +116,24 @@
   function rank(list) {
     return list.slice().sort(function (a, b) {
       return (b.score - a.score) || (a.time - b.time);
-    }).slice(0, 10);
+    }).slice(0, 100);
   }
 
   function paintBoard(list) {
     boardList.innerHTML = '';
     if (!list || !list.length) {
       boardWrap.hidden = true;
+      boardWrap.style.display = 'none';
       return;
     }
+    boardTitle.textContent = list.length < 100
+      ? 'Top runs (' + list.length + ')'
+      : 'Top 100 runs';
     list.forEach(function (row, i) {
       var li = document.createElement('li');
+      if (playerName && row.name === playerName) li.className = 'me';
       var pos = document.createElement('span');
+      pos.className = 'pos';
       pos.textContent = (i + 1) + '.';
       var who = document.createElement('b');
       who.textContent = row.name;
@@ -138,6 +145,7 @@
       boardList.appendChild(li);
     });
     boardWrap.hidden = false;
+    boardWrap.style.display = 'block';
   }
 
   function loadBoard() {
