@@ -223,9 +223,21 @@
     }
     timeAlive = 0;
     state = 'play';
-    banner.hidden = true;
+    hideBanner();
     resetPlayer();
     updateHud();
+  }
+
+  // Show and hide the overlay from JS as well as via the hidden attribute, so
+  // it works even if the stylesheet is stale or missing.
+  function hideBanner() {
+    banner.hidden = true;
+    banner.style.display = 'none';
+  }
+
+  function openBanner() {
+    banner.hidden = false;
+    banner.style.display = 'flex';
   }
 
   function updateHud() {
@@ -238,8 +250,10 @@
     bannerText.textContent = text;
     bannerBtn.textContent = label;
     nameRow.hidden = true;
+    nameRow.style.display = 'none';
     nameError.hidden = true;
-    banner.hidden = false;
+    nameError.style.display = 'none';
+    openBanner();
     submitScore(won);
   }
 
@@ -298,19 +312,25 @@
       var typed = (nameInput.value || '').replace(/[<>]/g, '').trim();
       if (!typed) {
         nameError.hidden = false;
+        nameError.style.display = 'block';
         nameInput.focus();
         return;
       }
       playerName = typed.slice(0, 12);
       tagEl.textContent = playerName;
       nameRow.hidden = true;
+      nameRow.style.display = 'none';
       nameError.hidden = true;
+      nameError.style.display = 'none';
     }
     resetLevel(true);
   }
 
   bannerBtn.addEventListener('click', startRun);
-  nameInput.addEventListener('input', function () { nameError.hidden = true; });
+  nameInput.addEventListener('input', function () {
+    nameError.hidden = true;
+    nameError.style.display = 'none';
+  });
   soundBtn.addEventListener('click', function () { wakeAudio(); setMuted(!muted); });
   themeBtn.addEventListener('click', function () { setTheme(theme === 'world' ? 'space' : 'world'); });
 
@@ -731,7 +751,7 @@
   setTheme('world');
   resetLevel(true);
   state = 'ready';
-  banner.hidden = false;
+  openBanner();
   loadBoard();
   if (nameInput.focus) nameInput.focus();
   requestAnimationFrame(frame);
