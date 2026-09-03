@@ -62,11 +62,13 @@ app.post('/api/scores', (req, res) => {
     return res.status(400).json({ error: 'Time out of range' });
   }
 
+  const lvl = Number(body.level);
   const list = readScores();
   list.push({
     name,
     score: Math.round(score),
     time: Math.round(time * 10) / 10,
+    level: Number.isFinite(lvl) && lvl >= 1 && lvl <= 99 ? Math.round(lvl) : 1,
     won: !!body.won,
     at: new Date().toISOString()
   });
