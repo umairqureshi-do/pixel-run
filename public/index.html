@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Pixel Run</title>
 <meta name="description" content="A small side-scrolling platformer running on Node.js." />
-<link rel="stylesheet" href="styles.css?v=5" />
+<link rel="stylesheet" href="styles.css?v=7" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%232b1e4f'/><rect x='5' y='4' width='6' height='8' fill='%23ff7a5c'/></svg>" />
 </head>
 <body>
@@ -13,6 +13,7 @@
     <div class="hud">
       <span class="hud-item"><b id="score">0</b> coins</span>
       <span class="hud-item"><b id="lives">3</b> lives</span>
+      <span class="hud-item">level <b id="level">1/3</b></span>
       <span class="hud-item" id="player-tag"></span>
       <div class="hud-controls">
         <button id="theme" class="chip" type="button">Mode: world</button>
@@ -24,7 +25,7 @@
       <canvas id="game" width="960" height="540"></canvas>
 
       <div id="banner" class="banner">
-        <p id="banner-text">Collect coins, stomp what moves, reach the flag.</p>
+        <p id="banner-text">Three levels. Collect coins, stomp what moves, dodge what gets thrown at you.</p>
 
         <div id="name-row" class="name-row">
           <label for="player-name">Name</label>
@@ -50,6 +51,6 @@
     <p class="hint">Arrows or A/D to move &middot; Space to jump &middot; M to mute &middot; T for space mode &middot; R to restart</p>
   </main>
 
-  <script src="game.js?v=5"></script>
+  <script src="game.js?v=7"></script>
 </body>
 </html>

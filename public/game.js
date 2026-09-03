@@ -21,9 +21,12 @@
   var boardWrap = document.getElementById('board-wrap');
   var boardList = document.getElementById('board-list');
   var boardTitle = document.getElementById('board-title');
+  var levelEl = document.getElementById('level');
 
   // ---- tuning -------------------------------------------------------------
   var GRAVITY = 2300;
+  var GRAVITY_SPACE = 1450;   // level 1 in space mode: floatier jumps
+  var MAX_FALL_SPACE = 720;
   var MOVE = 280;
   var AIR_MOVE = 240;
   var JUMP = 800;
@@ -85,6 +88,11 @@
         tone({ from: f, dur: 0.18, vol: 0.06, delay: i * 0.11 });
       });
     },
+    skyWarn: function () {
+      tone({ from: 500, to: 180, dur: 0.5, type: 'sawtooth', vol: 0.05 });
+      tone({ from: 380, to: 140, dur: 0.6, type: 'triangle', vol: 0.04, delay: 0.12 });
+    },
+    throwHazard: function () { tone({ from: 180, to: 420, dur: 0.09, type: 'sawtooth', vol: 0.03 }); },
     over: function () {
       [392, 330, 262, 196].forEach(function (f, i) {
         tone({ from: f, dur: 0.22, type: 'triangle', vol: 0.06, delay: i * 0.14 });
@@ -138,7 +146,7 @@
       var who = document.createElement('b');
       who.textContent = row.name;
       var pts = document.createElement('span');
-      pts.textContent = row.score + ' coins';
+      pts.textContent = row.score + ' coins' + (row.level ? ' \u00b7 lv' + row.level : '');
       li.appendChild(pos);
       li.appendChild(who);
       li.appendChild(pts);
@@ -156,7 +164,13 @@
   }
 
   function submitScore(won) {
-    var entry = { name: playerName, score: score, time: Math.round(timeAlive * 10) / 10, won: !!won };
+    var entry = {
+      name: playerName,
+      score: score,
+      time: Math.round(timeAlive * 10) / 10,
+      level: levelIndex + 1,
+      won: !!won
+    };
     localBoard.push(entry);
     fetch('/api/scores', {
       method: 'POST',
@@ -168,57 +182,159 @@
       .catch(function () { paintBoard(rank(localBoard)); });
   }
 
-  // ---- level --------------------------------------------------------------
-  var LEVEL_W = 4300;
+  // ---- levels -------------------------------------------------------------
   var GROUND_Y = 470;
 
   function block(x, y, w, h, kind) {
     return { x: x, y: y, w: w, h: h, kind: kind || 'earth' };
   }
 
-  var platforms = [
-    block(0, GROUND_Y, 900, 90),
-    block(1030, GROUND_Y, 760, 90),
-    block(1930, GROUND_Y, 980, 90),
-    block(3060, GROUND_Y, 1240, 90),
-    block(360, 360, 140, 24, 'stone'),
-    block(620, 280, 120, 24, 'stone'),
-    block(900, 350, 110, 24, 'stone'),
-    block(1240, 340, 160, 24, 'stone'),
-    block(1520, 250, 140, 24, 'stone'),
-    block(1800, 330, 120, 24, 'stone'),
-    block(2180, 360, 180, 24, 'stone'),
-    block(2460, 270, 140, 24, 'stone'),
-    block(2760, 350, 120, 24, 'stone'),
-    block(2980, 240, 140, 24, 'stone'),
-    block(3320, 340, 160, 24, 'stone'),
-    block(3620, 260, 140, 24, 'stone'),
-    block(3860, 410, 60, 60),
-    block(3920, 350, 60, 120)
-  ];
+  function ground(x, w) { return block(x, GROUND_Y, w, 90); }
+  function ledge(x, y, w) { return block(x, y, w, 24, 'stone'); }
 
-  var coinSpots = [
-    [400, 310], [440, 310], [660, 230], [700, 230], [930, 300],
-    [1280, 290], [1320, 290], [1560, 200], [1600, 200], [1840, 280],
-    [2220, 310], [2260, 310], [2300, 310], [2500, 220], [2540, 220],
-    [2800, 300], [3020, 190], [3060, 190], [3360, 290], [3400, 290],
-    [3660, 210], [3700, 210], [1100, 435], [2000, 435], [3150, 435]
-  ];
+  // Throwers stand still and lob a hazard at the player: fire in world mode,
+  // shards of hot blue glass in space mode. Same object, two skins.
+  function thrower(x, y, opts) {
+    opts = opts || {};
+    return {
+      x: x, y: y,
+      dir: opts.dir || -1,
+      every: opts.every || 2.0,
+      speed: opts.speed || 210,
+      arc: !!opts.arc,
+      phase: opts.phase || 0
+    };
+  }
 
-  var enemySpots = [
-    { x: 620, min: 520, max: 860 },
-    { x: 1200, min: 1060, max: 1420 },
-    { x: 1600, min: 1480, max: 1760 },
-    { x: 2100, min: 1960, max: 2320 },
-    { x: 2600, min: 2420, max: 2860 },
-    { x: 3300, min: 3120, max: 3520 },
-    { x: 3700, min: 3560, max: 3820 }
-  ];
+  var LEVELS = [
+    {
+      name: 'Level 1 — The long walk',
+      blurb: 'Coins, a few patrolling squares, and the flag at the end.',
+      w: 4300,
+      goalX: 4120,
+      lowGravityInSpace: true,  // space mode plays floaty here
+      skyFire: true,            // world mode starts dropping fire once you are ahead
+      platforms: [
+        ground(0, 900), ground(1030, 760), ground(1930, 980), ground(3060, 1240),
+        ledge(360, 360, 140), ledge(620, 280, 120), ledge(900, 350, 110),
+        ledge(1240, 340, 160), ledge(1520, 250, 140), ledge(1800, 330, 120),
+        ledge(2180, 360, 180), ledge(2460, 270, 140), ledge(2760, 350, 120),
+        ledge(2980, 240, 140), ledge(3320, 340, 160), ledge(3620, 260, 140),
+        block(3860, 410, 60, 60), block(3920, 350, 60, 120)
+      ],
+      coins: [
+        [400, 310], [440, 310], [660, 230], [700, 230], [930, 300],
+        [1280, 290], [1320, 290], [1560, 200], [1600, 200], [1840, 280],
+        [2220, 310], [2260, 310], [2300, 310], [2500, 220], [2540, 220],
+        [2800, 300], [3020, 190], [3060, 190], [3360, 290], [3400, 290],
+        [3660, 210], [3700, 210], [1100, 435], [2000, 435], [3150, 435]
+      ],
+      enemies: [
+        { x: 620, min: 520, max: 860 },
+        { x: 1200, min: 1060, max: 1420 },
+        { x: 1600, min: 1480, max: 1760 },
+        { x: 2100, min: 1960, max: 2320 },
+        { x: 2600, min: 2420, max: 2860 },
+        { x: 3300, min: 3120, max: 3520 },
+        { x: 3700, min: 3560, max: 3820 }
+      ],
+      throwers: []
+    },
 
-  var goal = { x: 4120, y: 320, w: 14, h: 150 };
+    {
+      name: 'Level 2 — Something is throwing',
+      blurb: 'Braziers spit fire down the track. In space they throw hot blue glass instead.',
+      w: 4600,
+      goalX: 4420,
+      platforms: [
+        ground(0, 760), ground(900, 700), ground(1740, 900), ground(2780, 820), ground(3740, 860),
+        ledge(300, 370, 120), ledge(520, 300, 110),
+        ledge(980, 350, 130), ledge(1200, 270, 120), ledge(1420, 340, 110),
+        ledge(1820, 340, 140), ledge(2080, 260, 120), ledge(2320, 340, 130),
+        ledge(2860, 300, 140), ledge(3100, 230, 120), ledge(3340, 340, 140),
+        ledge(3800, 340, 140), ledge(4040, 270, 120),
+        block(4280, 410, 60, 60), block(4340, 350, 60, 120)
+      ],
+      coins: [
+        [340, 320], [380, 320], [560, 250], [600, 250],
+        [1020, 300], [1060, 300], [1240, 220], [1280, 220], [1460, 290],
+        [1860, 290], [1900, 290], [2120, 210], [2160, 210], [2360, 290],
+        [2900, 250], [2940, 250], [3140, 180], [3180, 180], [3380, 290],
+        [3840, 290], [3880, 290], [4080, 220], [4120, 220],
+        [700, 435], [1600, 435], [2600, 435], [3500, 435]
+      ],
+      enemies: [
+        { x: 500, min: 380, max: 700 },
+        { x: 1100, min: 960, max: 1380 },
+        { x: 1900, min: 1800, max: 2180 },
+        { x: 2300, min: 2200, max: 2600 },
+        { x: 2950, min: 2840, max: 3240 },
+        { x: 3350, min: 3260, max: 3560 },
+        { x: 3950, min: 3800, max: 4240 }
+      ],
+      throwers: [
+        thrower(1300, GROUND_Y - 34, { every: 2.2, speed: 200 }),
+        thrower(2140, 260 - 34, { every: 2.6, speed: 190, phase: 0.8 }),
+        thrower(2500, GROUND_Y - 34, { every: 2.0, speed: 215, arc: true, phase: 0.4 }),
+        thrower(3160, 230 - 34, { every: 2.4, speed: 200, phase: 1.2 }),
+        thrower(3560, GROUND_Y - 34, { every: 1.9, speed: 225 }),
+        thrower(4200, GROUND_Y - 34, { every: 2.1, speed: 210, arc: true, phase: 0.6 })
+      ]
+    },
+
+    {
+      name: 'Level 3 — Up and over',
+      blurb: 'Less ground, more climbing, and the throwers have got quicker.',
+      w: 4400,
+      goalX: 4220,
+      platforms: [
+        ground(0, 700), ground(860, 560), ground(1560, 640), ground(2320, 600),
+        ground(3060, 540), ground(3740, 660),
+        ledge(280, 360, 120), ledge(500, 280, 110), ledge(760, 200, 110),
+        ledge(1120, 350, 130), ledge(1360, 270, 120), ledge(1600, 190, 120),
+        ledge(1980, 340, 140), ledge(2220, 260, 120), ledge(2460, 180, 120),
+        ledge(2860, 330, 130), ledge(3100, 250, 120), ledge(3340, 340, 140),
+        ledge(3580, 260, 120),
+        block(4060, 410, 60, 60), block(4120, 350, 60, 120)
+      ],
+      coins: [
+        [320, 310], [360, 310], [540, 230], [580, 230], [800, 150], [840, 150],
+        [1160, 300], [1200, 300], [1400, 220], [1440, 220], [1640, 140], [1680, 140],
+        [2020, 290], [2060, 290], [2260, 210], [2300, 210], [2500, 130], [2540, 130],
+        [2900, 280], [2940, 280], [3140, 200], [3180, 200], [3380, 290], [3620, 210],
+        [400, 435], [1800, 435], [2600, 435], [3300, 435], [3900, 435], [4000, 435]
+      ],
+      enemies: [
+        { x: 400, min: 260, max: 640 },
+        { x: 1000, min: 880, max: 1380 },
+        { x: 1700, min: 1580, max: 2160 },
+        { x: 2450, min: 2340, max: 2880 },
+        { x: 3150, min: 3080, max: 3580 },
+        { x: 3850, min: 3760, max: 4360 },
+        { x: 4100, min: 3900, max: 4380 }
+      ],
+      throwers: [
+        thrower(640, 200 - 34, { dir: 1, every: 1.8, speed: 230 }),
+        thrower(1240, GROUND_Y - 34, { every: 1.7, speed: 240, phase: 0.5 }),
+        thrower(1720, 190 - 34, { every: 2.0, speed: 220, phase: 1.0 }),
+        thrower(2200, GROUND_Y - 34, { every: 1.6, speed: 245, arc: true }),
+        thrower(2580, 180 - 34, { every: 1.9, speed: 230, phase: 0.7 }),
+        thrower(3220, 250 - 34, { every: 1.7, speed: 235, phase: 0.3 }),
+        thrower(3700, GROUND_Y - 34, { every: 1.5, speed: 250, arc: true, phase: 0.9 })
+      ]
+    }
+  ];
 
   // ---- state --------------------------------------------------------------
-  var player, coins, enemies, cam, score, lives, state, timeAlive;
+  var player, coins, enemies, throwers, shots, cam, score, lives, state, timeAlive;
+  var skyThreshold = 0;   // coins needed before the sky turns hostile, rolled per run
+  var skyCool = 0;
+  var skyWarned = 0;      // countdown for the on-screen warning
+  var skyDrift = 0;
+  var levelIndex = 0;
+  var level = LEVELS[0];
+  var platforms = LEVELS[0].platforms;
+  var goal = { x: 0, y: 320, w: 14, h: 150 };
 
   function resetPlayer() {
     player = {
@@ -230,22 +346,43 @@
     cam = 0;
   }
 
-  function resetLevel(full) {
-    coins = coinSpots.map(function (c) {
+  // full: 'run' starts a whole new game, 'level' reloads the current level only.
+  function loadLevel(index, full) {
+    levelIndex = index;
+    level = LEVELS[index];
+    platforms = level.platforms;
+    goal.x = level.goalX;
+
+    coins = level.coins.map(function (c) {
       return { x: c[0], y: c[1], r: 9, taken: false };
     });
-    enemies = enemySpots.map(function (e) {
+    enemies = level.enemies.map(function (e) {
       return { x: e.x, y: GROUND_Y - 34, w: 34, h: 34, vx: 70, min: e.min, max: e.max, dead: false, squash: 0 };
     });
+    throwers = level.throwers.map(function (t) {
+      return { x: t.x, y: t.y, dir: t.dir, every: t.every, speed: t.speed, arc: t.arc, cool: t.phase, fired: 0 };
+    });
+    shots = [];
+
+    // Varies run to run so you can never learn the exact moment it starts.
+    skyThreshold = 15 + Math.floor(Math.random() * 6);   // 15 to 20
+    skyCool = 1.2 + Math.random() * 1.4;
+    skyWarned = 0;
+    skyDrift = 0;
+
     if (full) {
       score = 0;
       lives = 3;
+      timeAlive = 0;
     }
-    timeAlive = 0;
     state = 'play';
     hideBanner();
     resetPlayer();
     updateHud();
+  }
+
+  function resetLevel(full) {
+    loadLevel(full ? 0 : levelIndex, full);
   }
 
   // Show and hide the overlay from JS as well as via the hidden attribute, so
@@ -260,9 +397,12 @@
     banner.style.display = 'flex';
   }
 
+  function coinWord(n) { return n + (n === 1 ? ' coin' : ' coins'); }
+
   function updateHud() {
     scoreEl.textContent = score;
     livesEl.textContent = lives;
+    if (levelEl) levelEl.textContent = (levelIndex + 1) + '/' + LEVELS.length;
   }
 
   function endRun(text, label, won) {
@@ -297,7 +437,11 @@
       if (e.code === 'Enter') startRun();
       return;
     }
-    if (e.code === 'KeyR') { wakeAudio(); if (playerName) resetLevel(true); return; }
+    if (e.code === 'KeyR') {
+      wakeAudio();
+      if (playerName && state === 'play') loadLevel(levelIndex, false);
+      return;
+    }
     if (e.code === 'KeyM') { setMuted(!muted); return; }
     if (e.code === 'KeyT') { setTheme(theme === 'world' ? 'space' : 'world'); return; }
     var k = keyMap[e.code];
@@ -328,6 +472,10 @@
 
   function startRun() {
     wakeAudio();
+    if (state === 'between') {
+      loadLevel(levelIndex + 1, false);
+      return;
+    }
     if (!playerName) {
       var typed = (nameInput.value || '').replace(/[<>]/g, '').trim();
       if (!typed) {
@@ -388,7 +536,8 @@
     updateHud();
     if (lives <= 0) {
       sfx.over();
-      endRun('Out of lives. ' + playerName + ' collected ' + score + ' coins.', 'Play again', false);
+      endRun('Out of lives on level ' + (levelIndex + 1) + '. ' + playerName +
+        ' collected ' + coinWord(score) + '.', 'Play again', false);
     } else {
       sfx.hurt();
       resetPlayer();
@@ -416,7 +565,9 @@
     }
     if (!keys.jump && player.vy < -JUMP * 0.35) player.vy = -JUMP * 0.35;
 
-    player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
+    var lowG = level.lowGravityInSpace && theme === 'space';
+    player.vy = Math.min(player.vy + (lowG ? GRAVITY_SPACE : GRAVITY) * dt,
+      lowG ? MAX_FALL_SPACE : MAX_FALL);
     moveAndCollide(dt);
 
     if (player.hurt > 0) player.hurt -= dt;
@@ -454,12 +605,222 @@
       }
     });
 
+    updateHazards(dt);
+
     if (overlaps(player, goal)) {
-      sfx.win();
-      endRun('Flag reached in ' + timeAlive.toFixed(1) + 's with ' + score + ' coins.', 'Play again', true);
+      if (levelIndex < LEVELS.length - 1) {
+        sfx.win();
+        state = 'between';
+        openBanner();
+        bannerText.textContent = 'Level ' + (levelIndex + 1) + ' cleared with ' + coinWord(score) +
+          '. Next: ' + LEVELS[levelIndex + 1].blurb;
+        bannerBtn.textContent = 'Level ' + (levelIndex + 2);
+      } else {
+        sfx.win();
+        endRun('All ' + LEVELS.length + ' levels cleared in ' + timeAlive.toFixed(1) +
+          's with ' + coinWord(score) + '.', 'Play again', true);
+      }
     }
 
-    cam = Math.max(0, Math.min(player.x - W * 0.4, LEVEL_W - W));
+    cam = Math.max(0, Math.min(player.x - W * 0.4, level.w - W));
+  }
+
+  // ---- hazards ------------------------------------------------------------
+  function skyActive() {
+    return level.skyFire && theme === 'world' && score >= skyThreshold;
+  }
+
+  function updateSkyFire(dt) {
+    skyDrift += dt;
+    if (skyWarned > 0) skyWarned -= dt;
+    if (!skyActive()) return;
+
+    // first time it triggers, put a warning on screen
+    if (skyWarned === 0) {
+      skyWarned = 2.6;
+      sfx.skyWarn();
+    }
+
+    skyCool -= dt;
+    if (skyCool > 0) return;
+
+    // every part of this varies: how long until the next one, where it lands,
+    // how fast it comes down, and occasionally two at once.
+    skyCool = 1.3 + Math.random() * 1.9;
+    var drops = Math.random() < 0.22 ? 2 : 1;
+
+    for (var n = 0; n < drops; n++) {
+      var target = player.x + (Math.random() * 420 - 210);
+      target = Math.max(20, Math.min(level.w - 40, target));
+      shots.push({
+        x: target,
+        y: -30,
+        w: 16, h: 16,
+        vx: (Math.random() * 60 - 30),
+        vy: 120 + Math.random() * 130,
+        arc: true,
+        sky: true,
+        warn: 0.55 + Math.random() * 0.35,
+        spin: Math.random() * 6
+      });
+    }
+  }
+
+  function updateHazards(dt) {
+    updateSkyFire(dt);
+
+    throwers.forEach(function (t) {
+      // only fire when the thrower is near enough to matter
+      if (t.x < cam - 200 || t.x > cam + W + 200) return;
+      t.cool -= dt;
+      if (t.cool > 0) return;
+      t.cool = t.every;
+      t.fired = 0.12;
+      shots.push({
+        x: t.x + (t.dir > 0 ? 26 : -12),
+        y: t.y + 6,
+        w: 16, h: 16,
+        vx: t.speed * t.dir,
+        vy: t.arc ? -260 : 0,
+        arc: t.arc,
+        spin: Math.random() * 6
+      });
+      sfx.throwHazard();
+    });
+
+    throwers.forEach(function (t) { if (t.fired > 0) t.fired -= dt; });
+
+    for (var i = shots.length - 1; i >= 0; i--) {
+      var s = shots[i];
+      if (s.warn > 0) { s.warn -= dt; s.spin += dt * 5; continue; }
+      if (s.arc) s.vy += 900 * dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.spin += dt * 7;
+
+      var gone = s.x < cam - 300 || s.x > cam + W + 300 || s.y > H + 60;
+      if (!gone) {
+        for (var p = 0; p < platforms.length; p++) {
+          if (overlaps(s, platforms[p])) { gone = true; break; }
+        }
+      }
+      if (gone) { shots.splice(i, 1); continue; }
+
+      if (player.hurt <= 0 && overlaps(s, player)) {
+        shots.splice(i, 1);
+        player.hurt = 1;
+        loseLife();
+        return;
+      }
+    }
+  }
+
+  function drawSkySource(t) {
+    if (!skyActive()) return;
+    var x = (W * 0.5) + Math.sin(skyDrift * 0.4) * (W * 0.32);
+    ctx.fillStyle = 'rgba(43,30,79,0.9)';
+    ctx.fillRect(x - 46, 18, 92, 18);
+    ctx.fillRect(x - 30, 6, 60, 18);
+    var glow = 0.4 + 0.35 * Math.abs(Math.sin(t * 5));
+    ctx.fillStyle = 'rgba(255,122,92,' + glow.toFixed(2) + ')';
+    ctx.fillRect(x - 34, 34, 68, 5);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(x - 8, 36, 16, 3);
+  }
+
+  function drawThrowers(t) {
+    throwers.forEach(function (th) {
+      var x = th.x - cam;
+      if (x < -80 || x > W + 80) return;
+      var lit = th.fired > 0;
+
+      if (theme === 'space') {
+        // a crystal emitter
+        ctx.fillStyle = '#3b2d68';
+        ctx.fillRect(x, th.y + 14, 28, 20);
+        ctx.fillStyle = lit ? '#bff2ff' : '#6fe6ff';
+        ctx.beginPath();
+        ctx.moveTo(x + 14, th.y - 6);
+        ctx.lineTo(x + 28, th.y + 16);
+        ctx.lineTo(x + 14, th.y + 26);
+        ctx.lineTo(x, th.y + 16);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // a stone brazier
+        ctx.fillStyle = '#4a3a33';
+        ctx.fillRect(x, th.y + 16, 28, 18);
+        ctx.fillStyle = '#6b5349';
+        ctx.fillRect(x - 3, th.y + 12, 34, 6);
+        var flick = 6 + Math.abs(Math.sin(t * 9 + th.x)) * (lit ? 12 : 6);
+        ctx.fillStyle = '#ff7a5c';
+        ctx.beginPath();
+        ctx.ellipse(x + 14, th.y + 8, 9, flick, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.ellipse(x + 14, th.y + 10, 4, flick * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
+  function drawShots(t) {
+    shots.forEach(function (s) {
+      var x = s.x - cam;
+      if (x < -40 || x > W + 40) return;
+
+      // a shadow on the ground marks where an incoming drop will land
+      if (s.warn > 0) {
+        var pulse = 0.35 + 0.4 * Math.abs(Math.sin(t * 12));
+        ctx.fillStyle = 'rgba(255,122,92,' + pulse.toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.ellipse(x + 8, GROUND_Y - 4, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x + 5, 6, 6, 14);
+        return;
+      }
+
+      var cx = x + s.w / 2;
+      var cy = s.y + s.h / 2;
+
+      if (theme === 'space') {
+        // a shard of hot blue glass
+        ctx.fillStyle = 'rgba(111,230,255,0.22)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(s.spin);
+        ctx.fillStyle = '#bff2ff';
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(6, 0);
+        ctx.lineTo(0, 10);
+        ctx.lineTo(-6, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2ea8d6';
+        ctx.fillRect(-2, -5, 4, 10);
+        ctx.restore();
+      } else {
+        // a ball of fire
+        var f = 1 + Math.abs(Math.sin(t * 14 + s.spin)) * 0.35;
+        ctx.fillStyle = 'rgba(255,122,92,0.25)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14 * f, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff7a5c';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8 * f, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4 * f, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
   }
 
   // ---- backgrounds --------------------------------------------------------
@@ -506,7 +867,7 @@
   ];
 
   function drawWorld() {
-    var night = clamp01(cam / (LEVEL_W - W));
+    var night = clamp01(cam / (level.w - W));
 
     var sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, mix(DAY.skyTop, NIGHT.skyTop, night));
@@ -612,7 +973,7 @@
 
     planets.forEach(function (pl) {
       var px = pl.x - cam * pl.par;
-      var span = LEVEL_W * pl.par + W + 400;
+      var span = level.w * pl.par + W + 400;
       px = ((px % span) + span) % span;
       if (px < -120 || px > W + 120) return;
 
@@ -747,13 +1108,31 @@
     ctx.fillRect(ex, y + 19, 6, 6);
   }
 
+  function drawNotice(t) {
+    if (skyWarned <= 0 || state !== 'play') return;
+    var a = Math.min(1, skyWarned / 0.6);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(13,8,32,0.75)';
+    ctx.fillRect(W / 2 - 200, 40, 400, 44);
+    ctx.fillStyle = '#ff7a5c';
+    ctx.font = '20px Menlo, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Something up there is throwing fire', W / 2, 69);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+
   function render(t) {
     if (theme === 'space') drawSpace(t); else drawWorld();
     drawPlatforms();
     drawCoins(t);
     drawGoal();
+    drawSkySource(t);
+    drawThrowers(t);
     drawEnemies();
+    drawShots(t);
     drawPlayer(t);
+    drawNotice(t);
   }
 
   // ---- loop ---------------------------------------------------------------
@@ -769,7 +1148,7 @@
 
   setMuted(false);
   setTheme('world');
-  resetLevel(true);
+  loadLevel(0, true);
   state = 'ready';
   openBanner();
   loadBoard();
